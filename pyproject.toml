@@ -1,0 +1,17 @@
+[project]
+name = "research-agent"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "baml-py>=0.211.2",
+    "langchain-community>=0.4",
+    "langgraph>=1.0.1",
+    "langgraph-api>=0.4.46",
+    "langgraph-cli>=0.4.4",
+    "pydantic>=2.12.3",
+    "tavily-python>=0.7.12",
+    "typing-extensions>=4.15.0",
+    "wikipedia>=1.4.0",
+]
