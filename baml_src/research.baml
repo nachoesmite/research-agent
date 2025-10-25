@@ -72,6 +72,12 @@ test create_analysts_test() {
     human_analyst_feedback ""
     max_analysts 1
   }
+  @@check(correct_count, {{ this.analysts|length == 1 }})
+  @@check(has_name, {{ this.analysts[0].name|length > 0 }})
+  @@check(has_role, {{ this.analysts[0].role|length > 0 }})
+  @@check(has_affiliation, {{ this.analysts[0].affiliation|length > 0 }})
+  @@check(has_description, {{ this.analysts[0].description|length > 0 }})
+  @@assert({{ _.checks.correct_count and _.checks.has_name and _.checks.has_role }})
 }
 
 function GenerateQuestion(analyst_persona: string, messages: Message[]) -> string {
@@ -104,6 +110,33 @@ function GenerateQuestion(analyst_persona: string, messages: Message[]) -> strin
   "#
 }
 
+test generate_question_test() {
+  functions [GenerateQuestion]
+  args {
+    analyst_persona #"
+      You are Dr. Sarah Chen, a sports historian and analyst specializing in South American football history. 
+      Your affiliation is with the Institute of Football Culture at Universidad de la República, Uruguay. 
+      You focus on legendary players and their impact on club culture, particularly interested in technical skills, 
+      leadership qualities, and cultural significance within club traditions.
+    "#
+    messages [
+      {
+        role: "system"
+        content: "You are an expert on Peñarol football club history and players."
+      },
+      {
+        role: "assistant"
+        content: "Hello, I'm Dr. Sarah Chen from the Institute of Football Culture. I'm researching the greatest players in Peñarol's history."
+      }
+    ]
+  }
+  @@check(substantial, {{ this|length > 20 }})
+  @@check(has_question_mark, {{ "?" in this }})
+  @@check(introduces_herself, {{ "Sarah" in this or "Dr." in this }})
+  @@check(not_ending_interview, {{ "Thank you so much for your help!" not in this }})
+  @@assert({{ _.checks.substantial and _.checks.has_question_mark }})
+}
+
 function GenerateSearchQuery(messages: Message[]) -> SearchQuery {
   client GPT4o
   prompt #"
@@ -126,7 +159,32 @@ function GenerateSearchQuery(messages: Message[]) -> SearchQuery {
   "#
 }
 
-function GenerateAnswer(analyst_persona: string, context: string) -> string {
+test generate_search_query_test() {
+  functions [GenerateSearchQuery]
+  args {
+    messages [
+      {
+        role: "assistant"
+        content: "I'm researching the greatest Peñarol players of all time."
+      },
+      {
+        role: "user"
+        content: "Many consider Diego Forlán to be one of the most talented players to come from Peñarol's youth system."
+      },
+      {
+        role: "assistant"
+        content: "Can you tell me more about Diego Forlán's early career at Peñarol and what made him stand out from other young talents?"
+      }
+    ]
+  }
+  @@check(has_query, {{ this.search_query|length > 0 }})
+  @@check(substantial_query, {{ this.search_query|length > 10 }})
+  @@check(includes_forlan, {{ "Forlán" in this.search_query or "Forlan" in this.search_query }})
+  @@check(includes_penarol, {{ "Peñarol" in this.search_query or "Penarol" in this.search_query }})
+  @@assert({{ _.checks.has_query and _.checks.substantial_query }})
+}
+
+function GenerateAnswer(analyst_persona: string, context: string, messages: Message[]) -> string {
   client GPT4o
   prompt #"
     You are an expert being interviewed by an analyst.
@@ -135,6 +193,12 @@ function GenerateAnswer(analyst_persona: string, context: string) -> string {
             
     You goal is to answer a question posed by the interviewer.
 
+    ---------------------------------
+    The question is taken from: 
+    {% for message in messages %}
+      {{ message.role }}: {{ message.content }}
+    {% endfor %}
+    ---------------------------------
     To answer question, use this context:
     {{ context }}
 
@@ -160,6 +224,49 @@ function GenerateAnswer(analyst_persona: string, context: string) -> string {
 
     {{ ctx.output_format }}
   "#
+}
+
+test generate_answer_test() {
+  functions [GenerateAnswer]
+  args {
+    analyst_persona #"
+      Sports historian focusing on South American football legends, particularly interested in 
+      technical skills and cultural impact of players within their clubs.
+    "#
+    context #"
+      <Document source="peñarol_history.pdf" page="15">
+      Diego Forlán joined Peñarol's youth academy at age 12 in 1991. He quickly distinguished himself 
+      with exceptional ball control and vision. His grandfather, Juan Carlos Corazzo, was also a former 
+      Peñarol player, creating a family legacy. Forlán made his first-team debut in 1997 at age 18, 
+      scoring 11 goals in his first season.
+      </Document>
+      
+      <Document source="https://wikipedia.org/wiki/Diego_Forlan">
+      Diego Forlán Corazzo is a Uruguayan former professional footballer who played as a forward. 
+      He is regarded as one of the greatest Uruguayan players of all time. Forlán had a successful 
+      international career, winning the Golden Ball at the 2010 FIFA World Cup.
+      </Document>
+    "#
+    messages [
+      {
+        role: "assistant"
+        content: "I'm researching the greatest Peñarol players of all time."
+      },
+      {
+        role: "user"
+        content: "Many consider Diego Forlán to be one of the most talented players to come from Peñarol's youth system."
+      },
+      {
+        role: "assistant"
+        content: "Can you tell me more about Diego Forlán's early career at Peñarol and what made him stand out from other young talents?"
+      }
+    ]
+  }
+  @@check(substantial, {{ this|length > 100 }})
+  @@check(has_citations, {{ "[1]" in this or "[2]" in this }})
+  @@check(mentions_forlan, {{ "Diego Forlán" in this or "Forlan" in this }})
+  @@check(has_sources_section, {{ "peñarol_history.pdf" in this and "wikipedia.org" in this }})
+  @@assert({{ _.checks.substantial and _.checks.has_citations }})
 }
 
 function WriteSection(analyst_description: string, context: string) -> ReportSection {
@@ -223,6 +330,41 @@ function WriteSection(analyst_description: string, context: string) -> ReportSec
   "#
 }
 
+test write_section_test() {
+  functions [WriteSection]
+  args {
+    analyst_description #"
+      Sports historian and cultural analyst focusing on legendary South American football players, 
+      their technical abilities, leadership qualities, and lasting impact on club traditions and culture.
+    "#
+    context #"
+      <Document source="peñarol_legends.pdf" page="23">
+      Diego Forlán's time at Peñarol (1997-2001) established him as one of the most promising talents 
+      in Uruguayan football. His 11 goals in his debut season broke the club's record for a teenage player. 
+      His technical skills, particularly his first touch and ability to create space, were exceptional for his age.
+      </Document>
+      
+      <Document source="https://en.wikipedia.org/wiki/Diego_Forlan">
+      Forlán won the Pichichi Trophy twice in La Liga and was the top scorer at the 2010 World Cup. 
+      His success internationally brought global recognition to Peñarol's youth development system.
+      </Document>
+      
+      <Document source="club_culture_study.pdf" page="41">
+      Former teammates describe Forlán as a natural leader despite his young age, often staying after 
+      training to work on technique. His dedication became legendary among the youth academy players 
+      who followed his example.
+      </Document>
+    "#
+  }
+  @@check(has_main_header, {{ "##" in this.content }})
+  @@check(has_sub_headers, {{ "###" in this.content }})
+  @@check(has_summary, {{ "### Summary" in this.content }})
+  @@check(has_sources, {{ "### Sources" in this.content }})
+  @@check(has_citations, {{ "[1]" in this.content }})
+  @@check(reasonable_length, {{ this.content|length < 10000 }})
+  @@assert({{ _.checks.has_main_header and _.checks.has_summary and _.checks.has_sources }})
+}
+
 function WriteReport(topic: string, sections: string) -> string {
   client GPT4o
   prompt #"
@@ -262,6 +404,42 @@ function WriteReport(topic: string, sections: string) -> string {
   "#
 }
 
+test write_report_test() {
+  functions [WriteReport]
+  args {
+    topic "Greatest Players in Peñarol Football Club History"
+    sections #"
+      ## Technical Excellence and Youth Development
+      
+      ### Summary
+      Diego Forlán's emergence from Peñarol's youth academy represents one of the most successful 
+      talent development stories in Uruguayan football [1]. His record-breaking debut season with 
+      11 goals established new benchmarks for teenage players [1]. The technical foundation he 
+      developed at Peñarol became the cornerstone of his later international success [2].
+      
+      ### Sources
+      [1] peñarol_legends.pdf, page 23  
+      [2] https://en.wikipedia.org/wiki/Diego_Forlan
+      
+      ## Cultural Impact and Leadership
+      
+      ### Summary
+      Beyond technical skills, Forlán's influence on club culture was profound [1]. His dedication 
+      to extra training sessions inspired younger players and established new standards within the 
+      academy [1]. This cultural legacy continues to influence Peñarol's player development approach.
+      
+      ### Sources
+      [1] club_culture_study.pdf, page 41
+    "#
+  }
+  @@check(starts_with_insights, {{ "## Insights" in this }})
+  @@check(has_sources_section, {{ "## Sources" in this }})
+  @@check(preserves_citations, {{ "[1]" in this }})
+  @@check(no_analyst_names, {{ "Dr." not in this and "Sarah" not in this }})
+  @@check(consolidated_content, {{ this|length > 100 }})
+  @@assert({{ _.checks.starts_with_insights and _.checks.has_sources_section }})
+}
+
 function WriteIntroduction(topic: string, sections: string) -> string {
   client GPT4o
   prompt #"
@@ -288,6 +466,31 @@ function WriteIntroduction(topic: string, sections: string) -> string {
   "#
 }
 
+test write_introduction_test() {
+  functions [WriteIntroduction]
+  args {
+    topic "Greatest Players in Peñarol Football Club History"
+    sections #"
+      ## Technical Excellence and Youth Development
+      Diego Forlán's emergence from Peñarol's youth academy represents a masterclass in talent development, 
+      setting records and establishing new benchmarks for future generations.
+      
+      ## Cultural Impact and Leadership  
+      Beyond individual achievements, these legendary players shaped the very culture of the club, 
+      creating lasting traditions that continue to influence Peñarol today.
+      
+      ## International Recognition and Legacy
+      The global success of Peñarol-developed players has elevated the club's reputation worldwide, 
+      attracting international attention to Uruguay's football heritage.
+    "#
+  }
+  @@check(has_main_title, {{ "# " in this }})
+  @@check(has_introduction_header, {{ "## Introduction" in this }})
+  @@check(appropriate_length, {{ this|length >= 50 and this|length <= 1000 }})
+  @@check(no_preamble, {{ not (this[:7] == "Here is" or this[:7] == "This is") }})
+  @@assert({{ _.checks.has_main_title and _.checks.has_introduction_header }})
+}
+
 function WriteConclusion(topic: string, sections: string) -> string {
   client GPT4o
   prompt #"
@@ -310,4 +513,30 @@ function WriteConclusion(topic: string, sections: string) -> string {
 
     {{ ctx.output_format }}
   "#
+}
+
+test write_conclusion_test() {
+  functions [WriteConclusion]
+  args {
+    topic "Greatest Players in Peñarol Football Club History"
+    sections #"
+      ## Technical Excellence and Youth Development
+      The analysis reveals how Peñarol's systematic approach to youth development has consistently 
+      produced world-class talent, with players like Diego Forlán serving as prime examples of 
+      the club's technical excellence standards.
+      
+      ## Cultural Impact and Leadership
+      These legendary figures didn't just excel individually but fundamentally shaped the club's 
+      identity, creating a culture of dedication and excellence that continues to inspire new generations.
+      
+      ## International Recognition and Legacy
+      The global achievements of Peñarol-developed players have established the club as a prestigious 
+      institution in world football, cementing its place in international football history.
+    "#
+  }
+  @@check(has_conclusion_header, {{ "## Conclusion" in this }})
+  @@check(appropriate_length, {{ this|length >= 50 and this|length <= 1000 }})
+  @@check(no_preamble, {{ not (this[:7] == "Here is" or this[:7] == "This is") }})
+  @@check(recaps_content, {{ "Peñarol" in this }})
+  @@assert({{ _.checks.has_conclusion_header and _.checks.appropriate_length }})
 }

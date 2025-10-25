@@ -44,7 +44,7 @@ demo-quantum:
 
 # Test BAML client
 test-baml:
-	uv run python test_baml.py
+	uv run baml-cli test
 
 # Clean generated files and cache
 clean:

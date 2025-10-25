@@ -112,7 +112,7 @@ def generate_answer(state: InterviewState):
 
     # Get state
     analyst = state["analyst"]
-    messages = state["messages"]
+    baml_messages = langchain_messages_to_baml(state['messages'])
     context = state["context"]
 
     # Generate answer using BAML
@@ -122,6 +122,7 @@ def generate_answer(state: InterviewState):
     answer_content = traced_client.GenerateAnswer(
         analyst_persona=analyst_persona,
         context=context_str
+        messages=baml_messages
     )
     
     # Create AI message
