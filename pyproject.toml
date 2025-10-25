@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "baml-py>=0.211.2",
+    "graphviz>=0.21",
     "langchain-community>=0.4",
     "langgraph>=1.0.1",
     "langgraph-api>=0.4.46",
