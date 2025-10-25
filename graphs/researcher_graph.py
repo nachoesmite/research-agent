@@ -1,7 +1,7 @@
 from graphs.types import ResearchGraphState
 from graphs.interview_graph import create_analysts, human_feedback, get_interview_graph
 from graphs.traced_client import traced_client
-from langgraph.constants import Send
+from langgraph.types import Send
 from langgraph.graph import END, START, StateGraph
 from langchain_core.messages import HumanMessage
 from langgraph.graph.state import CompiledStateGraph
@@ -122,4 +122,5 @@ def get_research_graph() -> CompiledStateGraph:
 
     # Compile
     memory = MemorySaver()
-    return builder.compile(interrupt_before=['human_feedback'], checkpointer=memory)
+    # interrupt_before=['human_feedback'], 
+    return builder.compile(checkpointer=memory)
