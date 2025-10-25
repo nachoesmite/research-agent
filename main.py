@@ -1,7 +1,8 @@
-import asyncio
 import os
+import sys
+from datetime import datetime
 from dotenv import load_dotenv
-from research_assistant_baml import graph as research_graph
+from graphs.researcher_graph import get_research_graph
 
 # Load environment variables
 load_dotenv()
@@ -12,18 +13,65 @@ def main():
     # Configuration
     config = {
         "topic": "The impact of AI on software development productivity",
-        "max_analysts": 3,
-        "human_analyst_feedback": "approve"  # or "Please focus more on specific tools and metrics"
+        "max_analysts": 2,
     }
     
-    print("🔬 Starting Research Agent")
+    print("🔬 Starting Research Agent with BAML")
     print(f"📊 Topic: {config['topic']}")
     print(f"👥 Max Analysts: {config['max_analysts']}")
+    print(f"⏰ Started at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print("-" * 50)
     
     try:
-        # Run the research graph
-        result = research_graph.invoke(config)
+        # Get the compiled research graph
+        research_graph = get_research_graph()
+        
+        # Run the research graph with thread support for interrupts
+        from langgraph.graph.state import CompiledStateGraph
+        
+        thread_id = "research_session_" + datetime.now().strftime("%Y%m%d_%H%M%S")
+        
+        # First invoke - will pause at human_feedback if needed
+        result = research_graph.invoke(
+            config, 
+            {"configurable": {"thread_id": thread_id}}
+        )
+
+        current_state = research_graph.get_state({"configurable": {"thread_id": thread_id}})
+        
+        print(f"🔍 Current state:")
+        print(f"   Next node: {current_state.next}")
+        print(f"   Values keys: {list(current_state.values.keys()) if current_state.values else 'None'}")
+        print(f"   Metadata: {current_state.metadata}")        
+        # Check if we're interrupted (result will be None)
+        if current_state.next and 'human_feedback' in current_state.next:
+            print("\n⏸️  Paused for human feedback...")
+            
+            # Get current state to show analysts
+            state = research_graph.get_state({"configurable": {"thread_id": thread_id}})
+            if state.values and "analysts" in state.values:
+                analysts = state.values["analysts"]
+                print("Created analysts:")
+                for i, analyst in enumerate(analysts, 1):
+                    print(f"\n👤 Analyst {i}: {analyst.name}")
+                    print(f"   Role: {analyst.role}")
+                    print(f"   Focus: {analyst.description[:100]}...")
+            
+            feedback = input("\nProvide feedback (or 'approve' to continue): ").strip()
+            if not feedback:
+                feedback = "approve"
+            
+            print(f"📝 Feedback: {feedback}")
+            
+            # Update state with feedback and resume
+            research_graph.update_state(
+                {"configurable": {"thread_id": thread_id}}, 
+                {"human_analyst_feedback": feedback}
+            )
+            result = research_graph.invoke(
+                None, 
+                {"configurable": {"thread_id": thread_id}}
+            )
         
         print("\n✅ Research Complete!")
         print("\n📋 Final Report:")
@@ -42,85 +90,5 @@ def main():
         import traceback
         traceback.print_exc()
 
-def run_interactive():
-    """Run the research agent interactively"""
-    print("🔬 Interactive Research Agent")
-    print("-" * 30)
-    
-    # Get user input
-    topic = input("Enter research topic: ")
-    max_analysts = int(input("Number of analysts (1-5): ") or "3")
-    
-    feedback = input("Any specific feedback for analysts (press Enter to skip): ") or "approve"
-    
-    config = {
-        "topic": topic,
-        "max_analysts": max_analysts,
-        "human_analyst_feedback": feedback
-    }
-    
-    print(f"\n🚀 Starting research on: {topic}")
-    print("-" * 50)
-    
-    try:
-        result = research_graph.invoke(config)
-        
-        print("\n✅ Research Complete!")
-        print("\n📋 Final Report:")
-        print("=" * 60)
-        print(result.get("final_report", "No report generated"))
-        print("=" * 60)
-        
-        # Save report
-        filename = f"research_report_{topic.replace(' ', '_').lower()}.md"
-        with open(filename, "w", encoding="utf-8") as f:
-            f.write(result.get("final_report", "No report generated"))
-        
-        print(f"\n💾 Report saved to '{filename}'")
-        
-    except Exception as e:
-        print(f"❌ Error: {e}")
-        import traceback
-        traceback.print_exc()
-
-def test_analysts_only():
-    """Test just the analyst creation part"""
-    print("🧪 Testing Analyst Creation")
-    print("-" * 30)
-    
-    config = {
-        "topic": "The future of quantum computing",
-        "max_analysts": 2,
-        "human_analyst_feedback": "Focus on practical applications and current limitations"
-    }
-    
-    try:
-        # Just run the first step
-        from research_assistant_baml import create_analysts
-        result = create_analysts(config)
-        
-        print("✅ Analysts created successfully!")
-        for i, analyst in enumerate(result["analysts"], 1):
-            print(f"\n👤 Analyst {i}:")
-            print(f"   Name: {analyst.name}")
-            print(f"   Role: {analyst.role}")
-            print(f"   Affiliation: {analyst.affiliation}")
-            print(f"   Description: {analyst.description}")
-        
-    except Exception as e:
-        print(f"❌ Error: {e}")
-        import traceback
-        traceback.print_exc()
-
 if __name__ == '__main__':
-    import sys
-    
-    if len(sys.argv) > 1:
-        if sys.argv[1] == "interactive":
-            run_interactive()
-        elif sys.argv[1] == "test":
-            test_analysts_only()
-        else:
-            print("Usage: python main.py [interactive|test]")
-    else:
-        main()
+    main()

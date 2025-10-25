@@ -5,6 +5,7 @@ from langgraph.constants import Send
 from langgraph.graph import END, START, StateGraph
 from langchain_core.messages import HumanMessage
 from langgraph.graph.state import CompiledStateGraph
+from langgraph.checkpoint.memory import MemorySaver
 
 
 def initiate_all_interviews(state: ResearchGraphState):
@@ -121,4 +122,5 @@ def get_research_graph() -> CompiledStateGraph:
     builder.add_edge("finalize_report", END)
 
     # Compile
-    return builder.compile(interrupt_before=['human_feedback'])
+    memory = MemorySaver()
+    return builder.compile(interrupt_before=['human_feedback'], checkpointer=memory)

@@ -153,6 +153,8 @@ function GenerateAnswer(analyst_persona: string, context: string) -> string {
     6. If the source is: <Document source="assistant/docs/llama3_1.pdf" page="7"/>' then just list: 
             
     [1] assistant/docs/llama3_1.pdf, page 7 
+
+    7. Do not forget wikipedia links!
             
     And skip the addition of the brackets as well as the Document source preamble in your citation.
 
