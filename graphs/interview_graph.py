@@ -1,13 +1,12 @@
 from baml_client.types import Analyst
 from graphs.types import GenerateAnalystsState, InterviewState
-from baml_client import b
-from graphs.utils import BAMLTracer, langchain_messages_to_baml
+from baml_client import traced_client
+from graphs.utils import langchain_messages_to_baml
 from langchain_core.messages import AIMessage, get_buffer_string
 from langchain_community.document_loaders import WikipediaLoader
 from langchain_community.tools.tavily_search import TavilySearchResults
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
-baml_tracer = BAMLTracer()
 
 def get_analyst_persona(analyst: Analyst) -> str:
     """Get analyst persona string"""
@@ -22,15 +21,8 @@ def create_analysts(state: GenerateAnalystsState):
     max_analysts = state['max_analysts']
     human_analyst_feedback = state.get('human_analyst_feedback', '')
     
-    # Use BAML function to generate analysts
-    # perspectives = b.CreateAnalysts(
-    #     topic=topic,
-    #     human_analyst_feedback=human_analyst_feedback,
-    #     max_analysts=max_analysts
-    # )
-
-    perspectives = baml_tracer.call_baml_function(
-        "CreateAnalysts",
+    # Use BAML function to generate analysts with automatic tracing
+    perspectives = traced_client.CreateAnalysts(
         topic=topic,
         human_analyst_feedback=human_analyst_feedback,
         max_analysts=max_analysts
@@ -55,7 +47,7 @@ def generate_question(state: InterviewState):
     
     # Generate question using BAML
     analyst_persona = get_analyst_persona(analyst)
-    question_content = b.GenerateQuestion(
+    question_content = traced_client.GenerateQuestion(
         analyst_persona=analyst_persona,
         messages=baml_messages
     )
@@ -69,14 +61,13 @@ def generate_question(state: InterviewState):
 def search_web(state: InterviewState):
     """Retrieve docs from web search"""
 
-    # Search
     tavily_search = TavilySearchResults(max_results=3)
 
     # Convert messages to BAML format
     baml_messages = langchain_messages_to_baml(state['messages'])
     
     # Generate search query using BAML
-    search_query_result = b.GenerateSearchQuery(messages=baml_messages)
+    search_query_result = traced_client.GenerateSearchQuery(messages=baml_messages)
     
     # Search
     search_docs = tavily_search.invoke(search_query_result.search_query)
@@ -98,7 +89,7 @@ def search_wikipedia(state: InterviewState):
     baml_messages = langchain_messages_to_baml(state['messages'])
     
     # Generate search query using BAML
-    search_query_result = b.GenerateSearchQuery(messages=baml_messages)
+    search_query_result = traced_client.GenerateSearchQuery(messages=baml_messages)
     
     # Search
     search_docs = WikipediaLoader(
@@ -128,7 +119,7 @@ def generate_answer(state: InterviewState):
     analyst_persona = get_analyst_persona(analyst)
     context_str = "\n\n".join(context)
     
-    answer_content = b.GenerateAnswer(
+    answer_content = traced_client.GenerateAnswer(
         analyst_persona=analyst_persona,
         context=context_str
     )
@@ -186,7 +177,7 @@ def write_section(state: InterviewState):
    
     # Write section using BAML
     context_str = "\n\n".join(context)
-    section_result = b.WriteSection(
+    section_result = traced_client.WriteSection(
         analyst_description=analyst.description,
         context=context_str
     )

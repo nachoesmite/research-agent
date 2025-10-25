@@ -1,14 +1,11 @@
 from graphs.types import ResearchGraphState
 from graphs.interview_graph import create_analysts, human_feedback, get_interview_graph
-from baml_client import b
+from baml_client import traced_client
 from langgraph.constants import Send
 from langgraph.graph import END, START, StateGraph
 from langchain_core.messages import HumanMessage
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.checkpoint.memory import MemorySaver
-
-from graphs.utils import BAMLTracer
-baml_tracer = BAMLTracer()
 
 def initiate_all_interviews(state: ResearchGraphState):
     """Conditional edge to initiate all interviews via Send() API or return to create_analysts"""    
@@ -40,7 +37,7 @@ def write_report(state: ResearchGraphState):
     formatted_str_sections = "\n\n".join([f"{section}" for section in sections])
     
     # Generate report using BAML
-    report_content = b.WriteReport(
+    report_content = traced_client.WriteReport(
         topic=topic,
         sections=formatted_str_sections
     )
@@ -58,7 +55,7 @@ def write_introduction(state: ResearchGraphState):
     formatted_str_sections = "\n\n".join([f"{section}" for section in sections])
     
     # Generate introduction using BAML
-    intro_content = b.WriteIntroduction(
+    intro_content = traced_client.WriteIntroduction(
         topic=topic,
         sections=formatted_str_sections
     )
@@ -76,7 +73,7 @@ def write_conclusion(state: ResearchGraphState):
     formatted_str_sections = "\n\n".join([f"{section}" for section in sections])
     
     # Generate conclusion using BAML
-    conclusion_content = b.WriteConclusion(
+    conclusion_content = traced_client.WriteConclusion(
         topic=topic,
         sections=formatted_str_sections
     )
