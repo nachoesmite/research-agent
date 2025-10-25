@@ -1,6 +1,6 @@
 from graphs.types import ResearchGraphState
 from graphs.interview_graph import create_analysts, human_feedback, get_interview_graph
-from baml_client import traced_client
+from graphs.traced_client import traced_client
 from langgraph.constants import Send
 from langgraph.graph import END, START, StateGraph
 from langchain_core.messages import HumanMessage

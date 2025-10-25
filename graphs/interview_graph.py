@@ -1,6 +1,6 @@
 from baml_client.types import Analyst
 from graphs.types import GenerateAnalystsState, InterviewState
-from baml_client import traced_client
+from graphs.traced_client import traced_client
 from graphs.utils import langchain_messages_to_baml
 from langchain_core.messages import AIMessage, get_buffer_string
 from langchain_community.document_loaders import WikipediaLoader
