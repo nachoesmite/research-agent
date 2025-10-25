@@ -7,6 +7,8 @@ from langchain_core.messages import HumanMessage
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.checkpoint.memory import MemorySaver
 
+from graphs.utils import BAMLTracer
+baml_tracer = BAMLTracer()
 
 def initiate_all_interviews(state: ResearchGraphState):
     """Conditional edge to initiate all interviews via Send() API or return to create_analysts"""    

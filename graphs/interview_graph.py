@@ -1,12 +1,13 @@
 from baml_client.types import Analyst
 from graphs.types import GenerateAnalystsState, InterviewState
 from baml_client import b
-from graphs.utils import langchain_messages_to_baml
+from graphs.utils import BAMLTracer, langchain_messages_to_baml
 from langchain_core.messages import AIMessage, get_buffer_string
 from langchain_community.document_loaders import WikipediaLoader
 from langchain_community.tools.tavily_search import TavilySearchResults
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
+baml_tracer = BAMLTracer()
 
 def get_analyst_persona(analyst: Analyst) -> str:
     """Get analyst persona string"""
@@ -22,7 +23,14 @@ def create_analysts(state: GenerateAnalystsState):
     human_analyst_feedback = state.get('human_analyst_feedback', '')
     
     # Use BAML function to generate analysts
-    perspectives = b.CreateAnalysts(
+    # perspectives = b.CreateAnalysts(
+    #     topic=topic,
+    #     human_analyst_feedback=human_analyst_feedback,
+    #     max_analysts=max_analysts
+    # )
+
+    perspectives = baml_tracer.call_baml_function(
+        "CreateAnalysts",
         topic=topic,
         human_analyst_feedback=human_analyst_feedback,
         max_analysts=max_analysts
