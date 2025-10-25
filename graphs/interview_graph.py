@@ -121,7 +121,7 @@ def generate_answer(state: InterviewState):
     
     answer_content = traced_client.GenerateAnswer(
         analyst_persona=analyst_persona,
-        context=context_str
+        context=context_str,
         messages=baml_messages
     )
     
