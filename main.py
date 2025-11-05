@@ -1,8 +1,6 @@
-import os
-import sys
 from datetime import datetime
 from dotenv import load_dotenv
-from graphs.researcher_graph import get_research_graph
+from graphs.researcher_graph import get_research_graph_with_memory
 
 # Load environment variables
 load_dotenv()
@@ -24,7 +22,7 @@ def main():
     
     try:
         # Get the compiled research graph
-        research_graph = get_research_graph()
+        research_graph = get_research_graph_with_memory
         
         # Run the research graph with thread support for interrupts
         from langgraph.graph.state import CompiledStateGraph

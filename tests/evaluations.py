@@ -1,26 +1,24 @@
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Set
+from typing import Any, Dict
 from openevals.llm import create_llm_as_judge
 from openevals.prompts import CORRECTNESS_PROMPT
 from dotenv import load_dotenv
 from langsmith import Client
-
 # Load environment variables
 load_dotenv()
 
 # Add the project root to Python path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from graphs.researcher_graph import get_research_graph
-from graphs.types import ResearchGraphState
+from graphs.researcher_graph import get_research_graph_with_memory
 
 def evaluate_research_agent(inputs: Dict[str, Any]) -> Dict[str, Any]:
     """
     Function to evaluate the research agent with comprehensive trajectory tracking.
     """
     # Create the research graph
-    graph = get_research_graph()
+    graph = get_research_graph_with_memory()
     
     # Extract topic from inputs
     topic = inputs["topic"]
@@ -36,7 +34,7 @@ def evaluate_research_agent(inputs: Dict[str, Any]) -> Dict[str, Any]:
     # Configuration with trajectory tracking
     config: Any = {
         "configurable": {"thread_id": f"eval-{hash(topic)}"},
-        "recursion_limit": 50
+        "recursion_limit": 50,
     }
     
     try:
@@ -161,7 +159,8 @@ def check_follows_expected_sequence(run, example):
     
     return {
         "key": "follows_expected_sequence",
-        "score": max(0, score)  # Ensure non-negative
+        "score": max(0, score),  # Ensure non-negative,
+        "comment": "Checked sequential and parallel node ordering."
     }
 
 def check_critical_nodes_coverage(run, example):
@@ -192,7 +191,8 @@ def check_critical_nodes_coverage(run, example):
     
     return {
         "key": "critical_nodes_coverage", 
-        "score": min(1.0, total_score)  # Cap at 1.0
+        "score": min(1.0, total_score),  # Cap at 1.0,
+        "comment": f"Visited essential nodes: {visited_essential}, parallel nodes: {visited_parallel}."
     }
 
 def check_no_infinite_loops(run, example):
@@ -219,7 +219,8 @@ def check_no_infinite_loops(run, example):
     
     return {
         "key": "no_infinite_loops",
-        "score": score
+        "score": score,
+        "comment": f"No infinite loops."
     }
 
 def check_step_efficiency(run, example):
@@ -245,7 +246,8 @@ def check_step_efficiency(run, example):
     
     return {
         "key": "step_efficiency",
-        "score": score
+        "score": score,
+        "comment": f"Total steps taken: {total_steps}."
     }
 
 def check_complete_workflow(run, example):
@@ -275,7 +277,8 @@ def check_complete_workflow(run, example):
     
     return {
         "key": "complete_workflow",
-        "score": score
+        "score": score,
+        "comment": f"Phases completed: {phases_completed} out of {total_phases}."
     }
 
 def check_error_free_execution(run, example):
@@ -294,7 +297,8 @@ def check_error_free_execution(run, example):
     
     return {
         "key": "error_free_execution",
-        "score": score
+        "score": score,
+        "comment": "Checked for successful execution and meaningful output."
     }
 
 def check_analyst_creation_efficiency(run, example):
@@ -315,7 +319,8 @@ def check_analyst_creation_efficiency(run, example):
     
     return {
         "key": "analyst_creation_efficiency",
-        "score": score
+        "score": score,
+        "comment": f"Created {num_analysts} analysts; expected {expected_analysts}."
     }
 
 # ✅ USAR LLM SOLO PARA EVALUACIÓN DE CALIDAD DE CONTENIDO
@@ -358,7 +363,8 @@ def check_content_correctness(run, example):
             }
         return {
             "key": "content_correctness",
-            "score": 0
+            "score": 0,
+            "comment": "LLM evaluation did not return a valid score."
         }
         
     except Exception as e:
@@ -391,7 +397,8 @@ def check_substantial_content(run, example):
     
     return {
         "key": "substantial_content",
-        "score": score
+        "score": score,
+        "comment": f"Report length: {len(final_report)} characters."
     }
 
 if __name__ == "__main__":

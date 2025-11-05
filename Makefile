@@ -22,29 +22,13 @@ dev:
 generate-baml:
 	uv run baml generate
 
-# Run default research
-research:
-	uv run python main.py
-
-# Run interactive research mode
-interactive:
-	uv run python main.py interactive
-
-# Test analyst creation only
-test:
-	uv run python main.py test
-
-# Demo: AI coding assistants research
-demo-ai:
-	uv run python main.py demo-ai
-
-# Demo: Quantum computing research
-demo-quantum:
-	uv run python main.py demo-quantum
-
 # Test BAML client
 test-baml:
 	uv run baml-cli test
+
+# Run Evaluations
+evals:
+	python tests/evaluations.py
 
 # Clean generated files and cache
 clean:

@@ -99,8 +99,9 @@ def finalize_report(state: ResearchGraphState):
     if sources is not None:
         final_report += "\n\n## Sources\n" + sources
     return {"final_report": final_report}
+    #return {"final_report": "El dulce de leche es lo mas rico que hay."}
 
-def get_research_graph() -> CompiledStateGraph:
+def get_research_graph_builder() -> StateGraph:
     builder = StateGraph(ResearchGraphState)
     builder.add_node("create_analysts", create_analysts)
     builder.add_node("human_feedback", human_feedback)
@@ -120,7 +121,14 @@ def get_research_graph() -> CompiledStateGraph:
     builder.add_edge(["write_conclusion", "write_report", "write_introduction"], "finalize_report")
     builder.add_edge("finalize_report", END)
 
-    # Compile
+    return builder
+
+def get_research_graph() -> CompiledStateGraph:
+
+    #return get_research_graph_builder().compile(interrupt_before=['human_feedback'])
+    return get_research_graph_builder().compile()
+
+def get_research_graph_with_memory() -> CompiledStateGraph:
     memory = MemorySaver()
-    # interrupt_before=['human_feedback'], 
+    builder = get_research_graph_builder()
     return builder.compile(checkpointer=memory)
